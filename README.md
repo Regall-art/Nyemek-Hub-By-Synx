@@ -1,2 +1,2 @@
-# fish-it-script
-Nyemek Hub
+# Nyemek Hub By Synx
+Premium Service
