@@ -1,6 +1,6 @@
--- Fish It Script - SUPER FAST AUTO FISH
--- Version: 7.0 - Ultra Fast & Working
--- Notification every 25 fish caught
+-- Fish It Script - WORKING AUTO FISH + CUSTOMIZABLE
+-- Version: 8.0 - Fully Customizable & Working
+-- Auto Fish with player settings
 
 repeat task.wait() until game:IsLoaded()
 task.wait(2)
@@ -10,8 +10,8 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- Create Window
 local Window = Rayfield:CreateWindow({
-    Name = "🎣 Nyemek Hub - Ultra Fast",
-    LoadingTitle = "Loading Ultra Fast Script...",
+    Name = "🎣 Fish It Hub - Customizable",
+    LoadingTitle = "Loading Customizable Script...",
     LoadingSubtitle = "by Regall-art",
     ConfigurationSaving = {
         Enabled = true,
@@ -51,18 +51,33 @@ end)
 local Stats = {
     FishCaught = 0,
     TotalFishCaught = 0,
-    LastNotification = 0,
+    SessionStartTime = tick(),
 }
 
--- Settings
+-- Settings - CUSTOMIZABLE BY PLAYER
 local Settings = {
+    -- Auto Fish Settings
     AutoFish = false,
-    FastMode = true, -- Ultra fast fishing
+    AutoCastEnabled = true,
+    AutoReelEnabled = true,
+    AutoShakeEnabled = true,
+    
+    -- Timing Settings (CUSTOMIZABLE)
+    CastDelay = 2, -- Delay after casting (1-5 seconds)
+    ReelDelay = 0.1, -- Delay between reels (0.05-0.5 seconds)
+    ReelAmount = 15, -- How many times to reel (5-30)
+    CheckDelay = 0.5, -- How often to check if fishing (0.3-2 seconds)
+    
+    -- Auto Sell Settings
     AutoSell = false,
-    SellThreshold = 25,
+    SellAt = 25, -- Sell when inventory reaches this (10-30)
+    
+    -- ESP
     FishESP = false,
     ChestESP = false,
     PlayerESP = false,
+    
+    -- Player
     WalkSpeed = 16,
     JumpPower = 50,
     Fly = false,
@@ -87,9 +102,9 @@ local function GetDistance(pos1, pos2)
     return (pos1 - pos2).Magnitude
 end
 
--- Fishing Functions - IMPROVED & FAST
+-- Fishing Functions - FIXED & WORKING
 local function GetRod()
-    -- Check equipped first
+    -- Check equipped
     for _, item in pairs(Character:GetChildren()) do
         if item:IsA("Tool") then
             return item
@@ -110,80 +125,51 @@ local function EquipRod()
     local rod = GetRod()
     if rod and rod.Parent == Player.Backpack then
         Humanoid:EquipTool(rod)
-        task.wait(0.2)
+        task.wait(0.5)
         return true
     end
     return rod ~= nil
 end
 
 local function Cast()
-    -- Rapid fire all methods at once for speed
+    -- Just click to cast
     task.spawn(function()
         VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-        task.wait(0.01)
+        task.wait(0.1)
         VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-    end)
-    
-    task.spawn(function()
-        VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-        task.wait(0.01)
-        VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-    end)
-    
-    task.spawn(function()
-        local rod = GetRod()
-        if rod then
-            for _, v in pairs(rod:GetDescendants()) do
-                if v:IsA("RemoteEvent") then
-                    pcall(function()
-                        v:FireServer(100) -- Max cast power
-                    end)
-                end
-            end
-        end
     end)
 end
 
 local function Reel()
-    -- Rapid fire all methods
+    -- Press space to reel
     task.spawn(function()
         VIM:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        task.wait(0.01)
+        task.wait(0.05)
         VIM:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-    end)
-    
-    task.spawn(function()
-        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-        task.wait(0.01)
-        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-    end)
-    
-    task.spawn(function()
-        local rod = GetRod()
-        if rod then
-            for _, v in pairs(rod:GetDescendants()) do
-                if v:IsA("RemoteEvent") then
-                    pcall(function()
-                        v:FireServer()
-                    end)
-                end
-            end
-        end
     end)
 end
 
+local function Shake()
+    -- Rapid clicks for shake minigame
+    for i = 1, 3 do
+        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        task.wait(0.05)
+        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+        task.wait(0.05)
+    end
+end
+
 local function IsFishing()
-    -- Check workspace for bobber - MULTIPLE CHECKS
+    -- Check if bobber exists in workspace
     for _, obj in pairs(Workspace:GetChildren()) do
-        local name = obj.Name:lower()
-        if name:find("bob") or name:find("float") or name:find("hook") then
+        if obj.Name:lower():find("bob") or obj.Name:lower():find("float") or obj.Name:lower():find("hook") then
             return true
         end
     end
     
-    -- Check deeper
+    -- Check descendants
     for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj.Name:lower():find("bob") or obj.Name:lower():find("float") then
+        if (obj.Name:lower():find("bob") or obj.Name:lower():find("float")) and obj:IsA("BasePart") then
             return true
         end
     end
@@ -191,56 +177,53 @@ local function IsFishing()
     return false
 end
 
--- Check if fish was caught
-local lastInventorySize = 0
-
-local function CheckFishCaught()
-    local currentSize = 0
-    
+-- Count fish in inventory
+local function CountFish()
+    local count = 0
     for _, item in pairs(Player.Backpack:GetChildren()) do
         if item:IsA("Tool") then
-            currentSize = currentSize + 1
+            count = count + 1
         end
     end
-    
-    if currentSize > lastInventorySize then
-        Stats.FishCaught = Stats.FishCaught + (currentSize - lastInventorySize)
-        Stats.TotalFishCaught = Stats.TotalFishCaught + (currentSize - lastInventorySize)
-        
-        -- Notification every 25 fish
-        if Stats.FishCaught >= 25 then
-            Notify("🎣 Fish Caught!", string.format("Caught %d fish!\nTotal: %d fish", Stats.FishCaught, Stats.TotalFishCaught), 5)
-            Stats.FishCaught = 0
-        end
-    end
-    
-    lastInventorySize = currentSize
+    return count
 end
 
--- Auto Sell Function - IMPROVED
+-- Check if caught fish
+local lastCount = 0
+
+local function CheckCaught()
+    local currentCount = CountFish()
+    
+    if currentCount > lastCount then
+        local caught = currentCount - lastCount
+        Stats.FishCaught = Stats.FishCaught + caught
+        Stats.TotalFishCaught = Stats.TotalFishCaught + caught
+        
+        -- Notify every 25 fish
+        if Stats.FishCaught >= 25 then
+            Notify("🎣 Fish Caught!", string.format("Caught %d fish!\nTotal: %d", Stats.FishCaught, Stats.TotalFishCaught), 5)
+            Stats.FishCaught = 0
+        end
+        
+        lastCount = currentCount
+        return true
+    end
+    
+    lastCount = currentCount
+    return false
+end
+
+-- Auto Sell
 local function SellFish()
-    -- Try to find sell location
     local foundSell = nil
     
+    -- Find sell NPC
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") or obj:IsA("Part") then
             local name = obj.Name:lower()
-            if name:find("sell") or name:find("merchant") or name:find("shop") then
+            if name:find("sell") or name:find("merchant") then
                 foundSell = obj
                 break
-            end
-        end
-    end
-    
-    if not foundSell then
-        -- Try ProximityPrompts
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj:IsA("ProximityPrompt") then
-                local parent = obj.Parent
-                if parent and (parent.Name:lower():find("sell") or parent.Name:lower():find("merchant")) then
-                    foundSell = parent
-                    break
-                end
             end
         end
     end
@@ -249,42 +232,27 @@ local function SellFish()
         local oldPos = Root.CFrame
         local targetPos = foundSell:IsA("Model") and foundSell:GetPivot().Position or foundSell.Position
         
-        -- Teleport
-        Root.CFrame = CFrame.new(targetPos) * CFrame.new(0, 5, 0)
+        Root.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
         task.wait(1)
         
         -- Try all sell methods
-        for i = 1, 5 do
-            -- Click all clickdetectors
+        for i = 1, 3 do
             for _, v in pairs(foundSell:GetDescendants()) do
                 if v:IsA("ClickDetector") then
-                    pcall(function()
-                        fireclickdetector(v)
-                    end)
+                    pcall(function() fireclickdetector(v) end)
                 end
-            end
-            
-            -- Fire all proximity prompts
-            for _, v in pairs(foundSell:GetDescendants()) do
                 if v:IsA("ProximityPrompt") then
-                    pcall(function()
-                        fireproximityprompt(v)
-                    end)
+                    pcall(function() fireproximityprompt(v) end)
                 end
             end
             
-            -- Fire sell remotes
             for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-                if remote:IsA("RemoteEvent") then
-                    if remote.Name:lower():find("sell") then
-                        pcall(function()
-                            remote:FireServer()
-                        end)
-                    end
+                if remote:IsA("RemoteEvent") and remote.Name:lower():find("sell") then
+                    pcall(function() remote:FireServer() end)
                 end
             end
             
-            task.wait(0.3)
+            task.wait(0.5)
         end
         
         task.wait(1)
@@ -292,13 +260,13 @@ local function SellFish()
         
         Notify("Auto Sell", "Sold all fish! 💰", 3)
         Stats.FishCaught = 0
-        lastInventorySize = 0
+        lastCount = 0
     else
-        Notify("Error", "Sell location not found!", 3)
+        Notify("Error", "Sell NPC not found!", 3)
     end
 end
 
--- Teleport Function - IMPROVED
+-- Teleport
 local function TeleportTo(position)
     if typeof(position) == "Vector3" then
         Root.CFrame = CFrame.new(position)
@@ -329,7 +297,7 @@ local function FindAndTeleport(searchTerms)
     return false
 end
 
--- ESP Functions
+-- ESP
 local function CreateESP(obj, text, color)
     if ESPObjects[obj] then return end
     
@@ -362,7 +330,7 @@ local function ClearESP()
     ESPObjects = {}
 end
 
--- Fly System
+-- Fly
 local Flying = false
 local BodyVelocity = nil
 
@@ -413,73 +381,186 @@ end
 
 -- Create Tabs
 local FishingTab = Window:CreateTab("🎣 Fishing", 4483362458)
+local SettingsTab = Window:CreateTab("⚙️ Settings", 4483362458)
 local FarmTab = Window:CreateTab("💰 Farm", 4483362458)
 local ESPTab = Window:CreateTab("👁️ ESP", 4483362458)
 local PlayerTab = Window:CreateTab("👤 Player", 4483362458)
 local TeleportTab = Window:CreateTab("📍 Teleport", 4483362458)
-local MiscTab = Window:CreateTab("⚙️ Misc", 4483362458)
 
 -- Fishing Tab
-local FishingSection = FishingTab:CreateSection("🔥 Ultra Fast Auto Fish")
-
-FishingTab:CreateLabel("⚡ SUPER FAST MODE - Instant Catch!")
+local MainSection = FishingTab:CreateSection("🎣 Auto Fish Control")
 
 local AutoFishToggle = FishingTab:CreateToggle({
-    Name = "🎣 Auto Fish (Ultra Fast)",
+    Name = "Enable Auto Fish",
     CurrentValue = false,
     Flag = "AutoFish",
     Callback = function(Value)
         Settings.AutoFish = Value
         
         if Value then
-            Notify("Auto Fish", "🔥 Ultra Fast Auto Fish ENABLED!\nNotification every 25 fish!", 5)
+            Notify("Auto Fish", "✅ Auto Fish Enabled!\nGo to fishing spot and wait!", 5)
         else
             Notify("Auto Fish", "Auto Fish Disabled", 2)
         end
     end,
 })
 
-FishingTab:CreateLabel("Current Fish Caught: 0 / 25")
+local ComponentsSection = FishingTab:CreateSection("Components")
+
+local AutoCastToggle = FishingTab:CreateToggle({
+    Name = "Auto Cast",
+    CurrentValue = true,
+    Flag = "AutoCast",
+    Callback = function(Value)
+        Settings.AutoCastEnabled = Value
+    end,
+})
+
+local AutoReelToggle = FishingTab:CreateToggle({
+    Name = "Auto Reel",
+    CurrentValue = true,
+    Flag = "AutoReel",
+    Callback = function(Value)
+        Settings.AutoReelEnabled = Value
+    end,
+})
+
+local AutoShakeToggle = FishingTab:CreateToggle({
+    Name = "Auto Shake (QTE)",
+    CurrentValue = true,
+    Flag = "AutoShake",
+    Callback = function(Value)
+        Settings.AutoShakeEnabled = Value
+    end,
+})
 
 local StatsSection = FishingTab:CreateSection("📊 Statistics")
 
-FishingTab:CreateLabel("Fish This Session: " .. Stats.FishCaught)
-FishingTab:CreateLabel("Total Fish Caught: " .. Stats.TotalFishCaught)
+FishingTab:CreateLabel("Session Fish: 0")
+FishingTab:CreateLabel("Total Fish: 0")
+FishingTab:CreateLabel("Fish/Hour: 0")
 
 local ManualSection = FishingTab:CreateSection("Manual Controls")
 
 FishingTab:CreateButton({
-    Name = "🎣 Cast Now",
+    Name = "🎣 Cast",
     Callback = function()
         Cast()
-        Notify("Fishing", "Casted! 🎣", 1)
+        Notify("Cast", "Casted! 🎣", 1)
     end,
 })
 
 FishingTab:CreateButton({
-    Name = "🎣 Reel Now",
+    Name = "🎣 Reel (15x)",
     Callback = function()
-        for i = 1, 20 do
+        for i = 1, 15 do
             Reel()
-            task.wait(0.03)
+            task.wait(0.1)
         end
-        Notify("Fishing", "Reeled! 🎣", 1)
+        Notify("Reel", "Reeled 15 times! 🎣", 2)
     end,
 })
 
 FishingTab:CreateButton({
     Name = "🎣 Equip Rod",
     Callback = function()
-        EquipRod()
-        Notify("Fishing", "Rod equipped! ✅", 1)
+        if EquipRod() then
+            Notify("Success", "Rod equipped! ✅", 2)
+        else
+            Notify("Error", "No rod found! ❌", 2)
+        end
     end,
 })
 
+-- Settings Tab - PLAYER CUSTOMIZATION
+local TimingSection = SettingsTab:CreateSection("⏱️ Timing Settings")
+
+SettingsTab:CreateSlider({
+    Name = "Cast Delay (seconds)",
+    Range = {1, 5},
+    Increment = 0.5,
+    CurrentValue = 2,
+    Flag = "CastDelay",
+    Callback = function(Value)
+        Settings.CastDelay = Value
+    end,
+})
+
+SettingsTab:CreateSlider({
+    Name = "Reel Delay (seconds)",
+    Range = {0.05, 0.5},
+    Increment = 0.05,
+    CurrentValue = 0.1,
+    Flag = "ReelDelay",
+    Callback = function(Value)
+        Settings.ReelDelay = Value
+    end,
+})
+
+SettingsTab:CreateSlider({
+    Name = "Reel Amount (times)",
+    Range = {5, 30},
+    Increment = 1,
+    CurrentValue = 15,
+    Flag = "ReelAmount",
+    Callback = function(Value)
+        Settings.ReelAmount = Value
+    end,
+})
+
+SettingsTab:CreateSlider({
+    Name = "Check Delay (seconds)",
+    Range = {0.3, 2},
+    Increment = 0.1,
+    CurrentValue = 0.5,
+    Flag = "CheckDelay",
+    Callback = function(Value)
+        Settings.CheckDelay = Value
+    end,
+})
+
+local PresetsSection = SettingsTab:CreateSection("🎛️ Speed Presets")
+
+SettingsTab:CreateButton({
+    Name = "⚡ Ultra Fast (Risky)",
+    Callback = function()
+        Settings.CastDelay = 1
+        Settings.ReelDelay = 0.05
+        Settings.ReelAmount = 25
+        Settings.CheckDelay = 0.3
+        Notify("Preset", "Ultra Fast mode! ⚡", 2)
+    end,
+})
+
+SettingsTab:CreateButton({
+    Name = "🔥 Fast (Balanced)",
+    Callback = function()
+        Settings.CastDelay = 2
+        Settings.ReelDelay = 0.1
+        Settings.ReelAmount = 15
+        Settings.CheckDelay = 0.5
+        Notify("Preset", "Fast mode! 🔥", 2)
+    end,
+})
+
+SettingsTab:CreateButton({
+    Name = "🐢 Safe (Legit)",
+    Callback = function()
+        Settings.CastDelay = 3
+        Settings.ReelDelay = 0.2
+        Settings.ReelAmount = 10
+        Settings.CheckDelay = 1
+        Notify("Preset", "Safe mode! 🐢", 2)
+    end,
+})
+
+SettingsTab:CreateParagraph({Title = "ℹ️ Tips", Content = "• Ultra Fast = Fastest but risky\n• Fast = Good balance (recommended)\n• Safe = Legit looking, slower"})
+
 -- Farm Tab
-local FarmSection = FarmTab:CreateSection("Auto Farm")
+local FarmSection = FarmTab:CreateSection("💰 Auto Farm")
 
 local AutoSellToggle = FarmTab:CreateToggle({
-    Name = "Auto Sell (Every 25 Fish)",
+    Name = "Auto Sell Fish",
     CurrentValue = false,
     Flag = "AutoSell",
     Callback = function(Value)
@@ -487,15 +568,29 @@ local AutoSellToggle = FarmTab:CreateToggle({
     end,
 })
 
+local SellThresholdSlider = FarmTab:CreateSlider({
+    Name = "Sell At (fish count)",
+    Range = {10, 30},
+    Increment = 1,
+    CurrentValue = 25,
+    Flag = "SellThreshold",
+    Callback = function(Value)
+        Settings.SellAt = Value
+    end,
+})
+
 FarmTab:CreateButton({
-    Name = "💰 Sell All Fish Now",
+    Name = "💰 Sell Now",
     Callback = function()
+        Notify("Selling", "Teleporting to sell...", 2)
         SellFish()
     end,
 })
 
+FarmTab:CreateLabel("Current Inventory: 0 fish")
+
 -- ESP Tab
-local ESPSection = ESPTab:CreateSection("ESP Features")
+local ESPSection = ESPTab:CreateSection("ESP")
 
 local FishESPToggle = ESPTab:CreateToggle({
     Name = "Fish ESP",
@@ -568,7 +663,7 @@ local NoClipToggle = PlayerTab:CreateToggle({
     end,
 })
 
-local FlySection = PlayerTab:CreateSection("Fly Mode")
+local FlySection = PlayerTab:CreateSection("Fly")
 
 local FlyToggle = PlayerTab:CreateToggle({
     Name = "Fly Mode",
@@ -592,103 +687,67 @@ local FlySpeedSlider = PlayerTab:CreateSlider({
 })
 
 -- Teleport Tab
-local TeleportSection = TeleportTab:CreateSection("📍 Quick Teleports")
+local TeleportSection = TeleportTab:CreateSection("Quick TP")
 
 TeleportTab:CreateButton({
-    Name = "🏪 TP to Sell NPC",
+    Name = "🏪 TP to Sell",
     Callback = function()
-        if FindAndTeleport({"sell", "merchant", "shop"}) then
-            Notify("Teleport", "Teleported to Sell! ✅", 2)
+        if FindAndTeleport({"sell", "merchant"}) then
+            Notify("TP", "Teleported! ✅", 2)
         else
-            Notify("Error", "Sell not found! ❌", 2)
+            Notify("Error", "Not found! ❌", 2)
         end
     end,
 })
 
 TeleportTab:CreateButton({
-    Name = "🪱 TP to Bait Shop",
+    Name = "🪱 TP to Bait",
     Callback = function()
-        if FindAndTeleport({"bait", "shop", "store"}) then
-            Notify("Teleport", "Teleported to Bait! ✅", 2)
+        if FindAndTeleport({"bait", "shop"}) then
+            Notify("TP", "Teleported! ✅", 2)
         else
-            Notify("Error", "Bait shop not found! ❌", 2)
+            Notify("Error", "Not found! ❌", 2)
         end
     end,
 })
 
 TeleportTab:CreateButton({
-    Name = "🎣 TP to Fishing Spot",
+    Name = "🎣 TP to Spot",
     Callback = function()
-        if FindAndTeleport({"fishing", "spot", "water", "pond", "lake"}) then
-            Notify("Teleport", "Teleported to Fishing Spot! ✅", 2)
+        if FindAndTeleport({"fishing", "spot", "water"}) then
+            Notify("TP", "Teleported! ✅", 2)
         else
-            Notify("Error", "Fishing spot not found! ❌", 2)
+            Notify("Error", "Not found! ❌", 2)
         end
     end,
 })
 
-local LocationSection = TeleportTab:CreateSection("Preset Locations")
+local LocationSection = TeleportTab:CreateSection("Locations")
 
 local locations = {
     {name = "Spawn", pos = CFrame.new(0, 10, 0)},
     {name = "Beach", pos = CFrame.new(100, 10, 0)},
     {name = "Pier", pos = CFrame.new(200, 15, 50)},
     {name = "Lake", pos = CFrame.new(-150, 10, 200)},
-    {name = "Ocean", pos = CFrame.new(500, 10, 500)},
 }
 
 for _, loc in ipairs(locations) do
     TeleportTab:CreateButton({
-        Name = "📍 " .. loc.name,
+        Name = loc.name,
         Callback = function()
             TeleportTo(loc.pos)
-            Notify("Teleport", "Teleported to " .. loc.name .. "! ✅", 2)
+            Notify("TP", "Teleported to " .. loc.name .. "! ✅", 2)
         end,
     })
 end
 
--- Misc Tab
-MiscTab:CreateButton({
-    Name = "🔄 Rejoin Server",
-    Callback = function()
-        game:GetService("TeleportService"):Teleport(game.PlaceId, Player)
-    end,
-})
-
-MiscTab:CreateButton({
-    Name = "🔀 Server Hop",
-    Callback = function()
-        local Http = game:GetService("HttpService")
-        local TPS = game:GetService("TeleportService")
-        local Api = "https://games.roblox.com/v1/games/"
-        
-        local success, result = pcall(function()
-            return Http:JSONDecode(game:HttpGet(Api .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-        end)
-        
-        if success and result.data then
-            for _, v in pairs(result.data) do
-                if v.id ~= game.JobId and v.playing < v.maxPlayers then
-                    TPS:TeleportToPlaceInstance(game.PlaceId, v.id, Player)
-                    return
-                end
-            end
-        end
-    end,
-})
-
-local InfoSection = MiscTab:CreateSection("Information")
-MiscTab:CreateLabel("Version: 7.0 - Ultra Fast")
-MiscTab:CreateLabel("UI: Rayfield Library")
-MiscTab:CreateLabel("User: " .. Player.Name)
-MiscTab:CreateParagraph({Title = "🎣 How to Use", Content = "1. Go to fishing spot\n2. Enable Auto Fish\n3. AFK & Farm!\n4. Get notif every 25 fish"})
-
--- MAIN LOOP - ULTRA FAST
+-- MAIN AUTO FISH LOOP - WORKING
 task.spawn(function()
-    print("🔥 Starting ULTRA FAST Auto Fish Loop...")
+    print("🎣 Starting Auto Fish Loop...")
     
-    while task.wait(0.15) do -- Very fast loop
+    while task.wait(Settings.CheckDelay) do
         pcall(function()
+            -- Update character
             if not Character or not Character.Parent then
                 Character = Player.Character
                 if Character then
@@ -698,38 +757,46 @@ task.spawn(function()
             end
             
             if Settings.AutoFish and Character then
-                -- Equip rod if not equipped
+                -- Equip rod if needed
                 local rod = GetRod()
                 if not rod or rod.Parent ~= Character then
                     EquipRod()
+                    task.wait(0.5)
                 end
                 
                 local fishing = IsFishing()
                 
                 -- Cast if not fishing
-                if not fishing then
+                if not fishing and Settings.AutoCastEnabled then
                     Cast()
-                    task.wait(0.5) -- Short wait after cast
-                else
-                    -- Reel FAST when fishing
-                    for i = 1, 25 do -- 25 rapid reels
-                        Reel()
-                        task.wait(0.02) -- Very fast reeling
+                    task.wait(Settings.CastDelay)
+                end
+                
+                -- Reel if fishing
+                if fishing then
+                    if Settings.AutoShakeEnabled then
+                        Shake()
+                        task.wait(0.3)
                     end
                     
-                    -- Check if caught fish
-                    task.wait(0.3)
-                    CheckFishCaught()
+                    if Settings.AutoReelEnabled then
+                        for i = 1, Settings.ReelAmount do
+                            Reel()
+                            task.wait(Settings.ReelDelay)
+                        end
+                    end
+                    
+                    task.wait(0.5)
+                    CheckCaught()
                 end
             end
             
-            -- Apply player mods
+            -- Player mods
             if Humanoid then
                 Humanoid.WalkSpeed = Settings.WalkSpeed
                 Humanoid.JumpPower = Settings.JumpPower
             end
             
-            -- No Clip
             if Settings.NoClip and Character then
                 for _, part in pairs(Character:GetDescendants()) do
                     if part:IsA("BasePart") then
@@ -746,14 +813,8 @@ task.spawn(function()
     while task.wait(10) do
         pcall(function()
             if Settings.AutoSell then
-                local count = 0
-                for _, item in pairs(Player.Backpack:GetChildren()) do
-                    if item:IsA("Tool") then
-                        count = count + 1
-                    end
-                end
-                
-                if count >= Settings.SellThreshold then
+                local count = CountFish()
+                if count >= Settings.SellAt then
                     Notify("Auto Sell", string.format("Selling %d fish...", count), 3)
                     SellFish()
                 end
@@ -809,12 +870,11 @@ Player.CharacterAdded:Connect(function(char)
 end)
 
 -- Success
-Notify("Nyemek Hub", "✅ ULTRA FAST MODE LOADED!\n🔥 Notification every 25 fish!", 5)
+Notify("Fish It Script", "✅ Loaded!\n⚙️ Fully Customizable\n🎣 Auto Fish Ready!", 5)
 
 print("════════════════════════════════════════")
-print("✅ Nyemek Hub - ULTRA FAST MODE")
-print("🔥 Version: 7.0")
-print("⚡ Fast Auto Fish: WORKING")
-print("🎣 Notification: Every 25 fish")
+print("✅ Fish It Script v8.0")
+print("⚙️ Fully Customizable")
+print("🎣 Auto Fish: WORKING")
 print("👤 User: " .. Player.Name)
 print("════════════════════════════════════════")
